@@ -31,8 +31,13 @@ app.post('/session/:nome', async (req, res) => {
   const pastaSession = `./.wwebjs_auth/session-${nome}`;
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: pastaSession }),
-    puppeteer: { headless: true }
+    puppeteer: {
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
   });
+
+
 
   sessoes[nome] = { client, qrCode: null };
 
