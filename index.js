@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const fs = require('fs');
@@ -17,6 +18,9 @@ const sessoes = {};
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Servir o index.html
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/ping', (req, res) => res.send('pong ✅'));
 
