@@ -39,6 +39,15 @@ app.post('/session/:nome', async (req, res) => {
 
   sessoes[nome] = { client, qrCode: null };
 
+  // Cria tabela imediatamente ao solicitar o QR Code
+  try {
+    const { error } = await supabase.rpc('criar_tabela_mensagens', { tabela_nome: `sessao_${nome}` });
+    if (error) throw error;
+    console.log(`✅ Tabela sessao_${nome} criada/verificada.`);
+  } catch (err) {
+    console.error('Erro ao criar/verificar tabela:', err.message);
+  }
+
   client.on('qr', async qr => {
     const qrImage = await qrcode.toDataURL(qr);
     sessoes[nome].qrCode = qrImage;
@@ -46,15 +55,6 @@ app.post('/session/:nome', async (req, res) => {
 
   client.on('ready', async () => {
     console.log(`🤖 Sessão ${nome} conectada!`);
-    
-    // Cria tabela no Supabase, se não existir
-    try {
-      const { error } = await supabase.rpc('criar_tabela_mensagens', { tabela_nome: `sessao_${nome}` });
-      if (error) throw error;
-      console.log(`Tabela sessao_${nome} criada/verificada.`);
-    } catch (err) {
-      console.error('Erro ao criar/verificar tabela:', err.message);
-    }
   });
 
   // Handler de mensagens recebidas
