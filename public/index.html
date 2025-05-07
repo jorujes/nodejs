@@ -78,8 +78,8 @@
                 const data = await response.json();
 
                 if (response.ok) {
+                    qrCodeDiv.setAttribute('data-nome', nome);
                     checkQRCode(nome);
-                    loadSessions();
                 } else {
                     qrCodeDiv.innerHTML = `<p>Erro ao criar sessão: ${data.error}</p>`;
                 }
@@ -99,16 +99,18 @@
                     qrCodeDiv.innerHTML = `
                         <h4>QR Code para ${nome}:</h4>
                         <img src="${data.qr}" alt="QR Code" width="200" />
-                        <p>Aguarde a conexão...</p>
+                        <p>Aguardando conexão...</p>
                     `;
 
                     // Verificar conexão a cada 3 segundos
                     const intervalId = setInterval(async () => {
                         const sessionsResponse = await fetch(`${baseURL}/sessions`);
                         const sessionsData = await sessionsResponse.json();
+
                         if (sessionsData.sessoes.includes(nome)) {
                             clearInterval(intervalId);
                             qrCodeDiv.innerHTML = `<p>Sessão ${nome} conectada!</p>`;
+                            loadSessions();  // Atualiza a lista de sessões ativas
                         }
                     }, 3000);
 
@@ -149,7 +151,11 @@
                 if (response.ok) {
                     alert(`Sessão ${nome} desconectada.`);
                     loadSessions();
-                    document.getElementById("qr-code").innerHTML = "<p>QR Code não gerado.</p>";
+                    
+                    const qrCodeDiv = document.getElementById("qr-code");
+                    if (qrCodeDiv.getAttribute('data-nome') === nome) {
+                        qrCodeDiv.innerHTML = "<p>QR Code não gerado.</p>";
+                    }
                 }
             } catch (error) {
                 alert("Erro ao desconectar sessão.");
