@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gerenciador de Sessões WhatsApp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        input, button {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #qr-code {
+            margin-top: 20px;
+        }
+
+        .session {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+            padding: 8px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .disconnect-btn {
+            padding: 4px 8px;
+            background-color: #f44336;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .disconnect-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <h2>Gerenciador de Sessões WhatsApp</h2>
+
+    <input type="text" id="sessionName" placeholder="Nome da sessão" />
+    <button onclick="createSession()">Gerar QR Code</button>
+
+    <div id="qr-code"></div>
+
+    <h3>Sessões Ativas:</h3>
+    <div id="sessions"></div>
+
+    <script>
+        const baseURL = 'https://nodejs-production-db8a.up.railway.app';
+
+        async function createSession() {
+            const nome = document.getElementById("sessionName").value;
+            if (!nome) {
+                alert("Por favor, insira um nome para a sessão.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${baseURL}/session/${nome}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`Sessão ${nome} criada com sucesso!`);
+                    loadQRCode(nome);
+                    loadSessions();
+                } else {
+                    alert(`Erro: ${data.error}`);
+                }
+            } catch (error) {
+                alert("Erro ao criar sessão.");
+            }
+        }
+
+        async function loadQRCode(nome) {
+            try {
+                const response = await fetch(`${baseURL}/session/${nome}/qr`);
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById("qr-code").innerHTML = `
+                        <h4>QR Code para ${nome}:</h4>
+                        <img src="${data.qr}" alt="QR Code" />
+                    `;
+                } else {
+                    alert("QR Code ainda não gerado.");
+                }
+            } catch (error) {
+                alert("Erro ao carregar QR Code.");
+            }
+        }
+
+        async function loadSessions() {
+            try {
+                const response = await fetch(`${baseURL}/sessions`);
+                const data = await response.json();
+                const sessionContainer = document.getElementById("sessions");
+                sessionContainer.innerHTML = "";
+                data.sessoes.forEach(nome => {
+                    const div = document.createElement("div");
+                    div.className = "session";
+                    div.innerHTML = `
+                        ${nome}
+                        <button class="disconnect-btn" onclick="disconnectSession('${nome}')">Desconectar</button>
+                    `;
+                    sessionContainer.appendChild(div);
+                });
+            } catch (error) {
+                alert("Erro ao carregar sessões.");
+            }
+        }
+
+        async function disconnectSession(nome) {
+            try {
+                const response = await fetch(`${baseURL}/session/${nome}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`Sessão ${nome} desconectada.`);
+                    loadSessions();
+                } else {
+                    alert(`Erro: ${data.error}`);
+                }
+            } catch (error) {
+                alert("Erro ao desconectar sessão.");
+            }
+        }
+
+        // Carrega as sessões ativas ao iniciar
+        loadSessions();
+    </script>
+</body>
+</html>
