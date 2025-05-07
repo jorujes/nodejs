@@ -7,9 +7,12 @@
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "supabase": "^2.22.12",
+    "whatsapp-web.js": "^1.27.0"
   },
   "scripts": {
-    "start": "node app.js"
+    "start": "node index.js"
   }
 }
