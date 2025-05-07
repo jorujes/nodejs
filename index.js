@@ -8,7 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 // Supabase config
 const supabase = createClient(
   'https://ktyuufojqhndijacwuvc.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0eXV1Zm9qcWhuZGlqYWN3dXZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1NTEzMTAsImV4cCI6MjA2MjEyNzMxMH0.69YBXW4b7i_zZTKTLmw_0oCYiByvgZIXrNee4tOPDC4'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0eXV1Zm9qcWhuZGlqYWN3dXZjIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjU1MTMxMCwiZXhwIjoyMDYyMTI3MzEwfQ.Ope4HaI4VipC2GZET5lfEoFrlCRJvgABlEYVcMa48-4'
 );
 
 // Estado de sessões ativas
@@ -46,16 +46,14 @@ app.post('/session/:nome', async (req, res) => {
 
   client.on('ready', async () => {
     console.log(`🤖 Sessão ${nome} conectada!`);
-
+    
+    // Cria tabela no Supabase, se não existir
     try {
       const { error } = await supabase.rpc('criar_tabela_mensagens', { tabela_nome: `sessao_${nome}` });
-      if (error) {
-        console.error('Erro ao criar/verificar tabela:', error.message);
-      } else {
-        console.log(`✅ Tabela sessao_${nome} criada/verificada.`);
-      }
+      if (error) throw error;
+      console.log(`Tabela sessao_${nome} criada/verificada.`);
     } catch (err) {
-      console.error('Erro durante a criação/verificação da tabela:', err.message);
+      console.error('Erro ao criar/verificar tabela:', err.message);
     }
   });
 
@@ -67,18 +65,6 @@ app.post('/session/:nome', async (req, res) => {
     const timestamp = new Date(msg.timestamp * 1000).toISOString();
 
     try {
-      // Verifica se a tabela existe antes de tentar inserir
-      const { data, error: checkError } = await supabase
-        .from('pg_tables')
-        .select('tablename')
-        .eq('tablename', `sessao_${nome}`);
-
-      if (checkError) throw checkError;
-      if (data.length === 0) {
-        console.warn(`Tabela sessao_${nome} não encontrada.`);
-        return;
-      }
-
       const { error } = await supabase
         .from(`sessao_${nome}`)
         .insert({
@@ -91,13 +77,11 @@ app.post('/session/:nome', async (req, res) => {
           conteudo: msg.body
         });
 
-      if (error) {
-        console.error('Erro ao salvar mensagem:', error.message);
-      } else {
-        console.log(`📦 Mensagem de ${numero} salva na tabela sessao_${nome}`);
-      }
+      if (error) throw error;
+
+      console.log(`📦 Mensagem de ${numero} salva na tabela sessao_${nome}`);
     } catch (err) {
-      console.error('Erro geral ao salvar mensagem:', err.message);
+      console.error('Erro ao salvar mensagem:', err.message);
     }
   });
 
