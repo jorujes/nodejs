@@ -39,7 +39,7 @@ app.post('/session/:nome', async (req, res) => {
     client,
     qrCode: null,
     isReady: false,
-    registros: {}      // <— CACHE: registros por número
+    registros: {}      // cache de registros por número
   };
 
   // Cria tabela no Supabase imediatamente
@@ -72,8 +72,20 @@ app.post('/session/:nome', async (req, res) => {
 
     const numero = msg.from.split('@')[0];
     const dateObj = new Date(msg.timestamp * 1000);
-    const data = dateObj.toISOString().split('T')[0];
-    const hora = dateObj.toTimeString().split(' ')[0];
+
+    // === ALTERAÇÃO: formata data como dd/MM/yyyy ===
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    const data = `${dd}/${mm}/${yyyy}`;
+    // ==============================================
+
+    // === ALTERAÇÃO: formata hora como HH:mm:ss ===
+    const hh = String(dateObj.getHours()).padStart(2, '0');
+    const mi = String(dateObj.getMinutes()).padStart(2, '0');
+    const ss = String(dateObj.getSeconds()).padStart(2, '0');
+    const hora = `${hh}:${mi}:${ss}`;
+    // ==============================================
 
     // Atualiza ou cria no cache
     const cache = sessoes[nome].registros;
