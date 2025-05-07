@@ -37,8 +37,6 @@ app.post('/session/:nome', async (req, res) => {
     }
   });
 
-
-
   sessoes[nome] = { client, qrCode: null };
 
   client.on('qr', async qr => {
@@ -48,12 +46,46 @@ app.post('/session/:nome', async (req, res) => {
 
   client.on('ready', async () => {
     console.log(`🤖 Sessão ${nome} conectada!`);
+    
     // Cria tabela no Supabase, se não existir
-    await supabase.rpc('criar_tabela_mensagens', { tabela_nome: `sessao_${nome}` });
+    try {
+      const { error } = await supabase.rpc('criar_tabela_mensagens', { tabela_nome: `sessao_${nome}` });
+      if (error) throw error;
+      console.log(`Tabela sessao_${nome} criada/verificada.`);
+    } catch (err) {
+      console.error('Erro ao criar/verificar tabela:', err.message);
+    }
+  });
+
+  // Handler de mensagens recebidas
+  client.on('message', async msg => {
+    if (msg.fromMe || msg.type !== 'chat') return;
+
+    const numero = msg.from.split('@')[0];
+    const timestamp = new Date(msg.timestamp * 1000).toISOString();
+
+    try {
+      const { error } = await supabase
+        .from(`sessao_${nome}`)
+        .insert({
+          numero,
+          primeira_data: timestamp.split('T')[0],
+          primeira_hora: timestamp.split('T')[1].split('.')[0],
+          ultima_data: timestamp.split('T')[0],
+          ultima_hora: timestamp.split('T')[1].split('.')[0],
+          total_mensagens: 1,
+          conteudo: msg.body
+        });
+
+      if (error) throw error;
+
+      console.log(`📦 Mensagem de ${numero} salva na tabela sessao_${nome}`);
+    } catch (err) {
+      console.error('Erro ao salvar mensagem:', err.message);
+    }
   });
 
   client.initialize();
-
   res.json({ status: 'iniciando sessão', nome });
 });
 
