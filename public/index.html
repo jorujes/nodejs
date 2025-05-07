@@ -89,15 +89,18 @@
             try {
                 const response = await fetch(`${baseURL}/session/${nome}/qr`);
                 const data = await response.json();
-                if (response.ok) {
-                    document.getElementById("qr-code").innerHTML = `
+                const qrCodeDiv = document.getElementById("qr-code");
+
+                if (response.ok && data.qr) {
+                    qrCodeDiv.innerHTML = `
                         <h4>QR Code para ${nome}:</h4>
-                        <img src="${data.qr}" alt="QR Code" />
+                        <img src="${data.qr}" alt="QR Code" width="200" />
                     `;
                 } else {
-                    alert("QR Code ainda não gerado.");
+                    qrCodeDiv.innerHTML = `<p>QR Code ainda não gerado.</p>`;
                 }
             } catch (error) {
+                console.error("Erro ao carregar QR Code:", error);
                 alert("Erro ao carregar QR Code.");
             }
         }
@@ -131,6 +134,7 @@
                 if (response.ok) {
                     alert(`Sessão ${nome} desconectada.`);
                     loadSessions();
+                    document.getElementById("qr-code").innerHTML = "";
                 } else {
                     alert(`Erro: ${data.error}`);
                 }
