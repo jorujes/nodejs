@@ -53,7 +53,9 @@
     <input type="text" id="sessionName" placeholder="Nome da sessão" />
     <button onclick="createSession()">Gerar QR Code</button>
 
-    <div id="qr-code"></div>
+    <div id="qr-code">
+        <p>QR Code não gerado.</p>
+    </div>
 
     <h3>Sessões Ativas:</h3>
     <div id="sessions"></div>
@@ -62,46 +64,61 @@
         const baseURL = 'https://nodejs-production-db8a.up.railway.app';
 
         async function createSession() {
-            const nome = document.getElementById("sessionName").value;
+            const nome = document.getElementById("sessionName").value.trim();
             if (!nome) {
                 alert("Por favor, insira um nome para a sessão.");
                 return;
             }
 
+            const qrCodeDiv = document.getElementById("qr-code");
+            qrCodeDiv.innerHTML = `<p>Gerando QR Code para ${nome}...</p>`;
+
             try {
-                const response = await fetch(`${baseURL}/session/${nome}`, {
-                    method: 'POST'
-                });
+                const response = await fetch(`${baseURL}/session/${nome}`, { method: 'POST' });
                 const data = await response.json();
+
                 if (response.ok) {
-                    alert(`Sessão ${nome} criada com sucesso!`);
-                    loadQRCode(nome);
+                    checkQRCode(nome);
                     loadSessions();
                 } else {
-                    alert(`Erro: ${data.error}`);
+                    qrCodeDiv.innerHTML = `<p>Erro ao criar sessão: ${data.error}</p>`;
                 }
             } catch (error) {
-                alert("Erro ao criar sessão.");
+                qrCodeDiv.innerHTML = `<p>Erro ao criar sessão.</p>`;
             }
         }
 
-        async function loadQRCode(nome) {
+        async function checkQRCode(nome) {
+            const qrCodeDiv = document.getElementById("qr-code");
+
             try {
                 const response = await fetch(`${baseURL}/session/${nome}/qr`);
                 const data = await response.json();
-                const qrCodeDiv = document.getElementById("qr-code");
 
                 if (response.ok && data.qr) {
                     qrCodeDiv.innerHTML = `
                         <h4>QR Code para ${nome}:</h4>
                         <img src="${data.qr}" alt="QR Code" width="200" />
+                        <p>Aguarde a conexão...</p>
                     `;
+
+                    // Verificar conexão a cada 3 segundos
+                    const intervalId = setInterval(async () => {
+                        const sessionsResponse = await fetch(`${baseURL}/sessions`);
+                        const sessionsData = await sessionsResponse.json();
+                        if (sessionsData.sessoes.includes(nome)) {
+                            clearInterval(intervalId);
+                            qrCodeDiv.innerHTML = `<p>Sessão ${nome} conectada!</p>`;
+                        }
+                    }, 3000);
+
                 } else {
-                    qrCodeDiv.innerHTML = `<p>QR Code ainda não gerado.</p>`;
+                    qrCodeDiv.innerHTML = `<p>QR Code ainda não gerado. Tentando novamente...</p>`;
+                    setTimeout(() => checkQRCode(nome), 3000);  // Recheca após 3 segundos
                 }
+
             } catch (error) {
-                console.error("Erro ao carregar QR Code:", error);
-                alert("Erro ao carregar QR Code.");
+                qrCodeDiv.innerHTML = `<p>Erro ao verificar QR Code.</p>`;
             }
         }
 
@@ -111,6 +128,7 @@
                 const data = await response.json();
                 const sessionContainer = document.getElementById("sessions");
                 sessionContainer.innerHTML = "";
+
                 data.sessoes.forEach(nome => {
                     const div = document.createElement("div");
                     div.className = "session";
@@ -121,29 +139,24 @@
                     sessionContainer.appendChild(div);
                 });
             } catch (error) {
-                alert("Erro ao carregar sessões.");
+                console.error("Erro ao carregar sessões:", error);
             }
         }
 
         async function disconnectSession(nome) {
             try {
-                const response = await fetch(`${baseURL}/session/${nome}`, {
-                    method: 'DELETE'
-                });
-                const data = await response.json();
+                const response = await fetch(`${baseURL}/session/${nome}`, { method: 'DELETE' });
                 if (response.ok) {
                     alert(`Sessão ${nome} desconectada.`);
                     loadSessions();
-                    document.getElementById("qr-code").innerHTML = "";
-                } else {
-                    alert(`Erro: ${data.error}`);
+                    document.getElementById("qr-code").innerHTML = "<p>QR Code não gerado.</p>";
                 }
             } catch (error) {
                 alert("Erro ao desconectar sessão.");
             }
         }
 
-        // Carrega as sessões ativas ao iniciar
+        // Carregar sessões ativas ao iniciar
         loadSessions();
     </script>
 </body>
