@@ -102,17 +102,8 @@
                         <p>Aguardando conexão...</p>
                     `;
 
-                    // Verificar conexão a cada 3 segundos
-                    const intervalId = setInterval(async () => {
-                        const sessionsResponse = await fetch(`${baseURL}/sessions`);
-                        const sessionsData = await sessionsResponse.json();
-
-                        if (sessionsData.sessoes.includes(nome)) {
-                            clearInterval(intervalId);
-                            qrCodeDiv.innerHTML = `<p>Sessão ${nome} conectada!</p>`;
-                            loadSessions();  // Atualiza a lista de sessões ativas
-                        }
-                    }, 3000);
+                    // Inicia a verificação da conexão
+                    monitorConnection(nome);
 
                 } else {
                     qrCodeDiv.innerHTML = `<p>QR Code ainda não gerado. Tentando novamente...</p>`;
@@ -122,6 +113,26 @@
             } catch (error) {
                 qrCodeDiv.innerHTML = `<p>Erro ao verificar QR Code.</p>`;
             }
+        }
+
+        async function monitorConnection(nome) {
+            const qrCodeDiv = document.getElementById("qr-code");
+
+            // Verifica conexão a cada 3 segundos
+            const intervalId = setInterval(async () => {
+                try {
+                    const response = await fetch(`${baseURL}/sessions`);
+                    const data = await response.json();
+
+                    if (data.sessoes.includes(nome)) {
+                        clearInterval(intervalId);
+                        qrCodeDiv.innerHTML = `<p>Sessão ${nome} conectada!</p>`;
+                        loadSessions();
+                    }
+                } catch (error) {
+                    console.error("Erro ao verificar conexão:", error);
+                }
+            }, 3000);
         }
 
         async function loadSessions() {
