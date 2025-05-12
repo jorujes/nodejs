@@ -27,22 +27,19 @@ app.post('/session/:nome', async (req, res) => {
     return res.status(400).json({ error: 'Sessão já está ativa.' });
   }
 
-  // Inicializa cliente WhatsApp
   const pastaSession = `./.wwebjs_auth/session-${nome}`;
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: pastaSession }),
     puppeteer: { headless: true, args: ['--no-sandbox','--disable-setuid-sandbox'] }
   });
 
-  // Armazena estado da sessão e cache de registros
   sessoes[nome] = {
     client,
     qrCode: null,
     isReady: false,
-    registros: {}      // cache de registros por número
+    registros: {}
   };
 
-  // Cria tabela no Supabase imediatamente
   try {
     const { error } = await supabase.rpc('criar_tabela_mensagens', {
       tabela_nome: `sessao_${nome}`
@@ -53,41 +50,33 @@ app.post('/session/:nome', async (req, res) => {
     console.error('❌ Erro ao criar/verificar tabela:', err.message);
   }
 
-  // QR Code gerado
   client.on('qr', qr => {
     qrcode.toDataURL(qr)
       .then(img => sessoes[nome].qrCode = img)
       .catch(e => console.error('❌ Falha ao gerar QR DataURL:', e.message));
   });
 
-  // Sessão pronta
   client.on('ready', () => {
     console.log(`🤖 Sessão ${nome} conectada!`);
     sessoes[nome].isReady = true;
   });
 
-  // Captura contínua de mensagens
   client.on('message', async msg => {
-    if (msg.fromMe || msg.type !== 'chat') return;
+    if (msg.type !== 'chat') return;
 
-    const numero = msg.from.split('@')[0];
+    const numero = msg.fromMe ? 'me' : msg.from.split('@')[0];
     const dateObj = new Date(msg.timestamp * 1000);
 
-    // === ALTERAÇÃO: formata data como dd/MM/yyyy ===
     const dd = String(dateObj.getDate()).padStart(2, '0');
     const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
     const yyyy = dateObj.getFullYear();
     const data = `${dd}/${mm}/${yyyy}`;
-    // ==============================================
 
-    // === ALTERAÇÃO: formata hora como HH:mm:ss ===
     const hh = String(dateObj.getHours()).padStart(2, '0');
     const mi = String(dateObj.getMinutes()).padStart(2, '0');
     const ss = String(dateObj.getSeconds()).padStart(2, '0');
     const hora = `${hh}:${mi}:${ss}`;
-    // ==============================================
 
-    // Atualiza ou cria no cache
     const cache = sessoes[nome].registros;
     if (!cache[numero]) {
       cache[numero] = {
@@ -97,17 +86,17 @@ app.post('/session/:nome', async (req, res) => {
         ultima_data: data,
         ultima_hora: hora,
         total_mensagens: 1,
-        conteudo: `[${data} ${hora}] ${msg.body}`
+        conteudo: `[${data} ${hora}] ${msg.fromMe ? 'Eu: ' : ''}${msg.body}`
       };
     } else {
       const r = cache[numero];
       r.ultima_data = data;
       r.ultima_hora = hora;
       r.total_mensagens += 1;
-      r.conteudo += `\n[${data} ${hora}] ${msg.body}`;
+      r.conteudo += `
+[${data} ${hora}] ${msg.fromMe ? 'Eu: ' : ''}${msg.body}`;
     }
 
-    // Upsert no Supabase
     try {
       const { error } = await supabase
         .from(`sessao_${nome}`)
