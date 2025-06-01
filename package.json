@@ -6,7 +6,7 @@
   "author": "alphasec",
   "license": "MIT",
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.4",
+    "@supabase/supabase-js": "^2.49.8",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "qrcode": "^1.5.4",
