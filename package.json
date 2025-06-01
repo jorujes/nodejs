@@ -10,7 +10,7 @@
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "qrcode": "^1.5.4",
-    "supabase": "^2.22.12",
+    "supabase": "^2.23.4",
     "whatsapp-web.js": "^1.27.0"
   },
   "scripts": {
